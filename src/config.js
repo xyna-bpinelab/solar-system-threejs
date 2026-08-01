@@ -1,76 +1,156 @@
-// 天体の物理比率・時間スケール・マテリアル・カメラ設定を1箇所に集約する。
+// 天体の物理比率・時間スケール・カメラ設定を1箇所に集約する。
 // 将来 lil-gui / dat.gui から書き換える対象は `config` オブジェクトの値のみ。
 
 // シーン内の1ユニット = 地球半径1（すべての半径・距離はこの単位の倍数として算出する）
 export const EARTH_RADIUS_UNIT = 1;
 
-// 半径比（基準: 地球 = 1）— 要件で指定された厳密な比率
-export const RADIUS_RATIO = {
-  sun: 109,
-  earth: 1,
-  moon: 0.27,
+export const SUN = {
+  name: 'sun',
+  label: '太陽',
+  radiusRatio: 109,
+  color: 0xffcc33,
 };
 
-// 距離比（基準: 地球の半径）— 要件で指定された厳密な比率
-export const DISTANCE_RATIO = {
-  sunToEarth: 23481,
-  earthToMoon: 60,
+// 太陽を公転する惑星。半径比・太陽からの距離比はいずれも地球半径基準の
+// 厳密な比率、公転・自転周期は日単位の実際の値。
+// 自転周期が負の値の惑星（金星・天王星）は逆行自転を表す。
+export const PLANETS = [
+  {
+    name: 'mercury',
+    label: '水星',
+    radiusRatio: 0.383,
+    distanceRatio: 9092,
+    orbitDays: 87.97,
+    rotationDays: 58.646,
+    tiltDeg: 0.034,
+    color: 0x9c8d7b,
+  },
+  {
+    name: 'venus',
+    label: '金星',
+    radiusRatio: 0.949,
+    distanceRatio: 16988,
+    orbitDays: 224.7,
+    rotationDays: -243.02,
+    tiltDeg: 177.4,
+    color: 0xd8b98a,
+  },
+  {
+    name: 'earth',
+    label: '地球',
+    radiusRatio: 1,
+    distanceRatio: 23481,
+    orbitDays: 365,
+    rotationDays: 1,
+    tiltDeg: 23.4,
+    color: 0x2266cc,
+  },
+  {
+    name: 'mars',
+    label: '火星',
+    radiusRatio: 0.532,
+    distanceRatio: 35778,
+    orbitDays: 686.98,
+    rotationDays: 1.026,
+    tiltDeg: 25.19,
+    color: 0xb1543a,
+  },
+  {
+    name: 'jupiter',
+    label: '木星',
+    radiusRatio: 10.97,
+    distanceRatio: 122202,
+    orbitDays: 4332.59,
+    rotationDays: 0.41354,
+    tiltDeg: 3.13,
+    color: 0xc9a679,
+  },
+  {
+    name: 'saturn',
+    label: '土星',
+    radiusRatio: 9.14,
+    distanceRatio: 225039,
+    orbitDays: 10759.22,
+    rotationDays: 0.44401,
+    tiltDeg: 26.73,
+    color: 0xe0c78a,
+  },
+  {
+    name: 'uranus',
+    label: '天王星',
+    radiusRatio: 3.98,
+    distanceRatio: 450965,
+    orbitDays: 30688.5,
+    rotationDays: -0.71833,
+    tiltDeg: 97.77,
+    color: 0x9fd4d6,
+  },
+  {
+    name: 'neptune',
+    label: '海王星',
+    radiusRatio: 3.86,
+    distanceRatio: 705730,
+    orbitDays: 60182,
+    rotationDays: 0.6713,
+    tiltDeg: 28.32,
+    color: 0x4d69bd,
+  },
+];
+
+// 月は地球を公転する特別な子天体（潮汐固定のため公転周期＝自転周期）
+export const MOON = {
+  name: 'moon',
+  label: '月',
+  radiusRatio: 0.27,
+  distanceRatio: 60,
+  orbitDays: 27.3,
+  rotationDays: 27.3,
+  color: 0xaaaaaa,
 };
 
-// 公転・自転周期（日）。月は地球に対し常に同じ面を向ける（潮汐固定）ため
-// 公転周期と自転周期が一致する。
-export const PERIOD_DAYS = {
-  earthOrbit: 365,
-  earthRotation: 1,
-  moonOrbit: 27.3,
-  moonRotation: 27.3,
-};
+// GUI の「表示/非表示」「サイズ倍率」チェック・スライダーの対象になる天体
+// （太陽は光源を兼ねるため常時表示とし、対象に含めない）。
+// 月は地球の次に並べて表示する。
+export const TOGGLE_BODY_NAMES = PLANETS.flatMap((p) => (p.name === 'earth' ? [p.name, MOON.name] : [p.name]));
 
-export const EARTH_AXIAL_TILT_DEG = 23.4;
+function defaultSizeMultipliers() {
+  const result = { sun: 1 };
+  for (const planet of PLANETS) result[planet.name] = 1;
+  result[MOON.name] = 1;
+  return result;
+}
+
+function defaultVisibility() {
+  const result = {};
+  for (const planet of PLANETS) result[planet.name] = true;
+  result[MOON.name] = true;
+  return result;
+}
 
 export const config = {
   scale: {
-    // 半径・距離は RADIUS_RATIO / DISTANCE_RATIO の厳密な比率を基本スケールとし、
-    // ここに掛け合わせる倍率のみで描画上のサイズ・距離を調整する。
-    // 既定値は 1（＝厳密な比率のまま）。地球・月は太陽との比率上きわめて小さく
-    // 視認しづらいため、将来 GUI から sizeMultiplier.earth / moon などを
+    // 半径は各天体の radiusRatio（厳密な比率）を基本スケールとし、
+    // ここに掛け合わせる倍率のみで描画上のサイズを調整する。
+    // 既定値は 1（＝厳密な比率のまま）。小さな天体は太陽・木星等との
+    // 比率上きわめて視認しづらいため、GUI から sizeMultiplier.xxx を
     // 大きくすることで「拡大表示トグル」を実現できる構造にしてある。
-    sizeMultiplier: {
-      sun: 1,
-      earth: 1,
-      moon: 1,
-    },
-    distanceMultiplier: {
-      sunToEarth: 1,
-      earthToMoon: 1,
-    },
+    sizeMultiplier: defaultSizeMultipliers(),
   },
   time: {
     // 実時間1秒あたりに進めるシミュレーション上の日数
     speed: 20,
     paused: false,
   },
-  materials: {
-    // 実テクスチャ未適用時のダミーカラー。texture に画像を読み込んだ
-    // THREE.Texture を渡すだけでテクスチャ付き表示に切り替えられる。
-    sun: { color: 0xffcc33, texture: null },
-    earth: { color: 0x2266cc, texture: null },
-    moon: { color: 0xaaaaaa, texture: null },
-  },
+  // 各天体をシミュレーション画面に表示するかどうか
+  visibility: defaultVisibility(),
   camera: {
     fov: 45,
     near: 1,
-    far: 200000,
-    // 太陽・地球・月の3天体を一括で見渡せる固定オフセット位置
-    initialPosition: { x: 0, y: 9000, z: 26000 },
+    far: 1500000,
+    // 内側の岩石惑星（水星〜火星）を見渡せる固定オフセット位置。
+    // 木星より外側の軌道は距離が桁違いに大きいため、初期表示では
+    // 視野に収まらない（「中心天体」選択とズームで個別に観察する想定）。
+    initialPosition: { x: 0, y: 15000, z: 45000 },
     initialTarget: { x: 0, y: 0, z: 0 },
   },
 };
-
-export function getRadius(body) {
-  return EARTH_RADIUS_UNIT * RADIUS_RATIO[body] * config.scale.sizeMultiplier[body];
-}
-
-export function getDistance(pair) {
-  return EARTH_RADIUS_UNIT * DISTANCE_RATIO[pair] * config.scale.distanceMultiplier[pair];
-}
