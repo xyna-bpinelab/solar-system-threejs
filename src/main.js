@@ -9,7 +9,7 @@ const engine = createEngine(container);
 const { scene, camera, renderer, controls } = engine;
 const solarSystem = createSolarSystem(scene);
 
-createGui(solarSystem, engine);
+const { cameraController } = createGui(solarSystem, engine);
 
 const clock = new THREE.Clock();
 
@@ -17,6 +17,7 @@ function animate() {
   requestAnimationFrame(animate);
 
   solarSystem.update(clock.getDelta());
+  cameraController.update();
   controls.update();
   renderer.render(scene, camera);
 }

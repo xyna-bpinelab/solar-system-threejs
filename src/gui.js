@@ -1,34 +1,23 @@
-import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { config } from './config.js';
+import { createCameraController } from './cameraController.js';
 
-const worldPosition = new THREE.Vector3();
-
-// カメラを対象の天体へ、その現在のスケール済み半径に応じた距離まで寄せる。
-// 厳密な比率のままだと地球・月は俯瞰視点からは視認できないほど小さいため、
-// サイズ倍率を変えなくても対象を素早く見つけられるようにするための機能。
-function focusOn(mesh, { camera, controls }) {
-  mesh.getWorldPosition(worldPosition);
-  const scaledRadius = mesh.geometry.parameters.radius * mesh.scale.x;
-  const distance = scaledRadius * 6 + 2;
-
-  camera.position.set(
-    worldPosition.x + distance,
-    worldPosition.y + distance * 0.6,
-    worldPosition.z + distance,
-  );
-  controls.target.copy(worldPosition);
-  controls.update();
-}
-
-// lil-gui パネルを構築し、config オブジェクトへ直接バインドする。
-// アニメーションループ（solarSystem.update）は毎フレーム config を読むだけなので、
-// ここでの変更は特別な同期処理なしに反映される。
+// lil-gui パネルを構築する。
+// 「時間」「拡大表示」は config オブジェクトへ直接バインドしており、
+// アニメーションループ側は毎フレーム config を読むだけなので特別な
+// 同期処理は不要。「視点」は cameraController 経由でカメラ・注視点を操作する。
 export function createGui(solarSystem, engine) {
   const gui = new GUI({ title: 'コントロールパネル' });
 
+  const bodies = {
+    sun: solarSystem.sun.mesh,
+    earth: solarSystem.earth.mesh,
+    moon: solarSystem.moon.mesh,
+  };
+  const cameraController = createCameraController(engine, bodies);
+
   const timeFolder = gui.addFolder('時間');
-  const pausedController = timeFolder.add(config.time, 'paused').name('一時停止');
+  timeFolder.add(config.time, 'paused').name('一時停止');
   timeFolder.add(config.time, 'speed', 0, 200, 1).name('速度 (日/秒)');
 
   const scaleFolder = gui.addFolder('拡大表示（距離はそのまま・見た目のサイズだけ変更）');
@@ -41,18 +30,29 @@ export function createGui(solarSystem, engine) {
     .name('月サイズ倍率')
     .onChange(() => solarSystem.applyScale());
 
-  // フォーカス時点で自動的に一時停止する。再生したままだと、近距離まで
-  // 寄った直後に公転で対象がフレームアウトしてしまうため。
-  function focusAndPause(mesh) {
-    config.time.paused = true;
-    pausedController.updateDisplay();
-    focusOn(mesh, engine);
-  }
+  const viewFolder = gui.addFolder('視点（画面中心に置く天体・仰角）');
+  viewFolder
+    .add(cameraController.viewState, 'centerBody', { 太陽: 'sun', 地球: 'earth', 月: 'moon' })
+    .name('中心天体')
+    .onChange((name) => cameraController.setOrbitTarget(name));
+  viewFolder
+    .add(cameraController.viewState, 'elevationDeg', -85, 85, 1)
+    .name('仰角（度）')
+    .onChange(() => cameraController.refreshElevation());
 
-  const viewFolder = gui.addFolder('視点');
-  viewFolder.add({ focusSun: () => focusAndPause(solarSystem.sun.mesh) }, 'focusSun').name('太陽を見る');
-  viewFolder.add({ focusEarth: () => focusAndPause(solarSystem.earth.mesh) }, 'focusEarth').name('地球を見る');
-  viewFolder.add({ focusMoon: () => focusAndPause(solarSystem.moon.mesh) }, 'focusMoon').name('月を見る');
+  const presetFolder = gui.addFolder('視点プリセット（○○から××を見る）');
+  presetFolder
+    .add({ run: () => cameraController.setViewpoint('earth', 'sun') }, 'run')
+    .name('地球から太陽を見る');
+  presetFolder
+    .add({ run: () => cameraController.setViewpoint('earth', 'moon') }, 'run')
+    .name('地球から月を見る');
+  presetFolder
+    .add({ run: () => cameraController.setViewpoint('moon', 'earth') }, 'run')
+    .name('月から地球を見る');
+  presetFolder
+    .add({ run: () => cameraController.setViewpoint('moon', 'sun') }, 'run')
+    .name('月から太陽を見る');
 
-  return gui;
+  return { gui, cameraController };
 }
