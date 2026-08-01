@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { CelestialBody } from './CelestialBody.js';
 import {
   config,
-  getRadius,
+  EARTH_RADIUS_UNIT,
+  RADIUS_RATIO,
   getDistance,
   PERIOD_DAYS,
   EARTH_AXIAL_TILT_DEG,
@@ -22,9 +23,12 @@ const TWO_PI = Math.PI * 2;
 //           └ moonOrbitPivot     … 地球を中心とした月の公転軸
 //               └ moon.mesh      … 自転（公転と同周期＝潮汐固定）
 export function createSolarSystem(scene) {
+  // ジオメトリは厳密比率のみで固定生成し、GUI からのサイズ倍率変更は
+  // mesh.scale で反映する（ジオメトリの再生成を避け、スライダー操作に
+  // 即座に追従できるようにするため）。
   const sun = new CelestialBody({
     name: 'sun',
-    radius: getRadius('sun'),
+    radius: EARTH_RADIUS_UNIT * RADIUS_RATIO.sun,
     materialType: 'basic',
     color: config.materials.sun.color,
     texture: config.materials.sun.texture,
@@ -46,7 +50,7 @@ export function createSolarSystem(scene) {
 
   const earth = new CelestialBody({
     name: 'earth',
-    radius: getRadius('earth'),
+    radius: EARTH_RADIUS_UNIT * RADIUS_RATIO.earth,
     color: config.materials.earth.color,
     texture: config.materials.earth.texture,
   });
@@ -57,12 +61,24 @@ export function createSolarSystem(scene) {
 
   const moon = new CelestialBody({
     name: 'moon',
-    radius: getRadius('moon'),
+    radius: EARTH_RADIUS_UNIT * RADIUS_RATIO.moon,
     color: config.materials.moon.color,
     texture: config.materials.moon.texture,
   });
-  moon.mesh.position.x = getDistance('earthToMoon');
   moonOrbitPivot.add(moon.mesh);
+
+  // config.scale の現在値をメッシュのスケール・位置に反映する。
+  // GUI のサイズ倍率スライダーから呼び出され、ジオメトリの再生成なしで
+  // 見た目のサイズ・距離を即座に更新できる。
+  function applyScale() {
+    sun.mesh.scale.setScalar(config.scale.sizeMultiplier.sun);
+    earth.mesh.scale.setScalar(config.scale.sizeMultiplier.earth);
+    moon.mesh.scale.setScalar(config.scale.sizeMultiplier.moon);
+
+    earthMoonGroup.position.x = getDistance('sunToEarth');
+    moon.mesh.position.x = getDistance('earthToMoon');
+  }
+  applyScale();
 
   function update(deltaSeconds) {
     if (config.time.paused) return;
@@ -76,5 +92,14 @@ export function createSolarSystem(scene) {
     moon.spin(TWO_PI * (deltaDays / PERIOD_DAYS.moonRotation));
   }
 
-  return { sun, earth, moon, earthOrbitPivot, earthMoonGroup, moonOrbitPivot, update };
+  return {
+    sun,
+    earth,
+    moon,
+    earthOrbitPivot,
+    earthMoonGroup,
+    moonOrbitPivot,
+    update,
+    applyScale,
+  };
 }
