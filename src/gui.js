@@ -27,7 +27,7 @@ function distanceToSlider(distance) {
 // なので特別な同期処理は不要。「視点」は cameraController 経由でカメラ・
 // 注視点を操作する。ズーム・仰角はマウス操作（ホイール／左ドラッグでの回転）
 // でも変化するため、毎フレーム syncViewControls() でスライダー表示を追従させる。
-export function createGui(solarSystem, engine) {
+export function createGui(solarSystem, engine, { starfield }) {
   const gui = new GUI({ title: 'コントロールパネル' });
 
   const bodies = { [SUN.name]: solarSystem.sun.mesh, [MOON.name]: solarSystem.moon.mesh };
@@ -54,6 +54,13 @@ export function createGui(solarSystem, engine) {
     .add(config.display, 'orbitLinesVisible')
     .name('軌道線（太陽-惑星・地球-月）')
     .onChange(() => solarSystem.applyVisibility());
+  displayFolder
+    .add(config.display, 'starsVisible')
+    .name('星空背景')
+    .onChange(() => {
+      starfield.visible = config.display.starsVisible;
+    });
+  starfield.visible = config.display.starsVisible;
 
   const bodyFolder = gui.addFolder('天体ごとの表示・拡大設定').close();
   for (const name of TOGGLE_BODY_NAMES) {

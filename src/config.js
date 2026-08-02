@@ -117,14 +117,19 @@ export const TOGGLE_BODY_NAMES = PLANETS.flatMap((p) => (p.name === 'earth' ? [p
 // ズーム最大距離を、天体データ側の変更にも自動で追従させるために使う。
 export const MAX_ORBIT_DISTANCE_RATIO = Math.max(...PLANETS.map((p) => p.distanceRatio));
 
+// 背景の星を配置する球の半径。ズームを最大まで引いてカメラが原点から
+// 離れた状態でも、反対側の星までの距離が far 平面を超えないよう、
+// MAX_ORBIT_DISTANCE_RATIO の 1.1 倍程度に抑える。
+export const STARFIELD_RADIUS = MAX_ORBIT_DISTANCE_RATIO * 1.1;
+
 // 起動時の初期表示値、および GUI の「デフォルト表示に戻す」ボタンが
 // 復元する値。両者が食い違わないよう、この定数を唯一の情報源にする。
 export const DEFAULT_VIEW = {
-  timeSpeed: 10,
+  timeSpeed: 5,
   centerBody: 'earth',
-  elevationDeg: 10,
-  zoomDistance: 400,
-  sizeMultiplier: { earth: 10, moon: 10 },
+  elevationDeg: 5,
+  zoomDistance: 350,
+  sizeMultiplier: { earth: 1, moon: 1 },
 };
 
 function defaultSizeMultipliers() {
@@ -158,10 +163,11 @@ export const config = {
   },
   // 各天体をシミュレーション画面に表示するかどうか
   visibility: defaultVisibility(),
-  // 天体名ラベル・太陽-惑星の軌道線の全体表示切り替え
+  // 天体名ラベル・太陽-惑星の軌道線・背景の星空の全体表示切り替え
   display: {
     labelsVisible: true,
     orbitLinesVisible: true,
+    starsVisible: true,
   },
   camera: {
     fov: 45,
