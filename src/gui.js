@@ -1,5 +1,5 @@
 import GUI from 'lil-gui';
-import { config, SUN, PLANETS, MOON, TOGGLE_BODY_NAMES, DEFAULT_VIEW } from './config.js';
+import { config, SUN, PLANETS, MOON, TOGGLE_BODY_NAMES, DEFAULT_VIEW, EARTH_RADIUS_KM } from './config.js';
 import { createCameraController } from './cameraController.js';
 
 const LABELS = { [SUN.name]: SUN.label, [MOON.name]: MOON.label };
@@ -7,6 +7,23 @@ for (const planet of PLANETS) LABELS[planet.name] = planet.label;
 
 const ZOOM_MIN_DISTANCE = 1;
 const ZOOM_MAX_DISTANCE = config.camera.maxZoomDistance; // scene.js の controls.maxDistance と一致させる
+
+const AU_KM = 149597870.7;
+const LY_KM = 9460730472580.8;
+
+// ズーム距離（シーン単位＝地球半径）は数値だけ見ても実際の距離感が
+// つかみにくいため、km / AU / 光年のうち適切な単位で人間に読める形にする。
+function formatRealDistance(distanceEarthRadii) {
+  const km = distanceEarthRadii * EARTH_RADIUS_KM;
+  if (km < AU_KM * 0.1) {
+    return `${Math.round(km).toLocaleString('ja-JP')} km`;
+  }
+  if (km < LY_KM) {
+    const au = km / AU_KM;
+    return `${au.toFixed(au < 10 ? 2 : 1)} AU`;
+  }
+  return `${(km / LY_KM).toFixed(4)} 光年`;
+}
 
 // lil-gui パネルを構築する。
 // 「時間」「天体ごとの表示・拡大設定」「表示オプション」は config オブジェクトへ
@@ -72,15 +89,18 @@ export function createGui(solarSystem, engine, { starfield }) {
     .decimals(1)
     .onChange(() => cameraController.refreshElevation());
 
-  // ズームの数値は実際のカメラ距離そのものを表示・入力できるようにする
-  // （以前は 0〜1000 の対数位置を表示しており、「350 に戻したのに画面には
-  // 350 と出ない」という分かりにくさがあったため）。ドラッグの操作性は
-  // 犠牲になるが、マウスホイールでのズームは対数的（乗算的）に効くため
-  // 実用上困らない。
+  // ズームの数値は実際のカメラ距離（地球半径単位）そのものを表示・入力
+  // できるようにする（以前は 0〜1000 の対数位置を表示しており、「350 に
+  // 戻したのに画面には 350 と出ない」という分かりにくさがあったため）。
+  // ラベルには km / AU / 光年に換算した実距離も添えて表示する。
+  function zoomLabel(distanceEarthRadii) {
+    return `ズーム（地球半径・実距離: ${formatRealDistance(distanceEarthRadii)}）`;
+  }
+
   const zoomState = { value: cameraController.getDistance() };
   const zoomController = viewFolder
     .add(zoomState, 'value', ZOOM_MIN_DISTANCE, ZOOM_MAX_DISTANCE, 1)
-    .name('ズーム（距離）')
+    .name(zoomLabel(zoomState.value))
     .decimals(0)
     .onChange((value) => cameraController.setDistance(value));
 
@@ -93,6 +113,7 @@ export function createGui(solarSystem, engine, { starfield }) {
       zoomState.value = distance;
       zoomController.updateDisplay();
     }
+    zoomController.name(zoomLabel(distance));
 
     const elevationValue = cameraController.getElevationDeg();
     if (Math.abs(elevationValue - cameraController.viewState.elevationDeg) > 0.1) {

@@ -4,6 +4,11 @@
 // シーン内の1ユニット = 地球半径1（すべての半径・距離はこの単位の倍数として算出する）
 export const EARTH_RADIUS_UNIT = 1;
 
+// 1 シーン単位（＝地球半径1つ分）が実際には何 km にあたるか。
+// ズーム距離などシーン単位の数値を、km / AU / 光年といった実際の
+// 単位に変換して表示する際に使う。
+export const EARTH_RADIUS_KM = 6371;
+
 export const SUN = {
   name: 'sun',
   label: '太陽',
