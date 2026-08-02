@@ -128,7 +128,7 @@ export const DEFAULT_VIEW = {
   timeSpeed: 5,
   centerBody: 'earth',
   elevationDeg: 5,
-  zoomDistance: 350,
+  zoomDistance: 100,
   sizeMultiplier: { earth: 1, moon: 1 },
 };
 
