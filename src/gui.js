@@ -7,19 +7,6 @@ for (const planet of PLANETS) LABELS[planet.name] = planet.label;
 
 const ZOOM_MIN_DISTANCE = 1;
 const ZOOM_MAX_DISTANCE = config.camera.maxZoomDistance; // scene.js の controls.maxDistance と一致させる
-const ZOOM_SLIDER_MAX = 1000;
-const ZOOM_LOG_RANGE = Math.log(ZOOM_MAX_DISTANCE / ZOOM_MIN_DISTANCE);
-
-// ズームは近距離（天体のすぐそば）から遠距離（海王星の軌道の外側）まで
-// 6桁以上に及ぶため、線形スライダーでは近距離側の操作性が悪くなる。
-// スライダー位置 0〜1000 を対数的に距離へマッピングする。
-function sliderToDistance(value) {
-  return ZOOM_MIN_DISTANCE * Math.exp(ZOOM_LOG_RANGE * (value / ZOOM_SLIDER_MAX));
-}
-function distanceToSlider(distance) {
-  const clamped = Math.min(ZOOM_MAX_DISTANCE, Math.max(ZOOM_MIN_DISTANCE, distance));
-  return (ZOOM_SLIDER_MAX * Math.log(clamped / ZOOM_MIN_DISTANCE)) / ZOOM_LOG_RANGE;
-}
 
 // lil-gui パネルを構築する。
 // 「時間」「天体ごとの表示・拡大設定」「表示オプション」は config オブジェクトへ
@@ -82,32 +69,30 @@ export function createGui(solarSystem, engine, { starfield }) {
   const elevationController = viewFolder
     .add(cameraController.viewState, 'elevationDeg', -85, 85, 1)
     .name('仰角（度）')
+    .decimals(1)
     .onChange(() => cameraController.refreshElevation());
 
-  // ズームスライダー自体は 0〜1000 の対数位置で操作するが、その数値だけでは
-  // 実際のカメラ距離が分からず紛らわしいため、ラベルに現在の実距離を
-  // 添えて表示する（例:「ズーム（距離: 350）」）。
-  function zoomLabel(distance) {
-    return `ズーム（距離: ${Math.round(distance)}）`;
-  }
-
-  const zoomState = { value: distanceToSlider(cameraController.getDistance()) };
+  // ズームの数値は実際のカメラ距離そのものを表示・入力できるようにする
+  // （以前は 0〜1000 の対数位置を表示しており、「350 に戻したのに画面には
+  // 350 と出ない」という分かりにくさがあったため）。ドラッグの操作性は
+  // 犠牲になるが、マウスホイールでのズームは対数的（乗算的）に効くため
+  // 実用上困らない。
+  const zoomState = { value: cameraController.getDistance() };
   const zoomController = viewFolder
-    .add(zoomState, 'value', 0, ZOOM_SLIDER_MAX, 1)
-    .name(zoomLabel(cameraController.getDistance()))
-    .onChange((value) => cameraController.setDistance(sliderToDistance(value)));
+    .add(zoomState, 'value', ZOOM_MIN_DISTANCE, ZOOM_MAX_DISTANCE, 1)
+    .name('ズーム（距離）')
+    .decimals(0)
+    .onChange((value) => cameraController.setDistance(value));
 
   // マウス操作（ホイールでのズーム、左ドラッグでの回転＝仰角変更）でも
   // カメラは変化するため、毎フレーム現在のカメラ状態からスライダー表示を
   // 計算し直す。
   function syncViewControls() {
     const distance = cameraController.getDistance();
-    const zoomValue = distanceToSlider(distance);
-    if (Math.abs(zoomValue - zoomState.value) > 0.5) {
-      zoomState.value = zoomValue;
+    if (Math.abs(distance - zoomState.value) > 0.5) {
+      zoomState.value = distance;
       zoomController.updateDisplay();
     }
-    zoomController.name(zoomLabel(distance));
 
     const elevationValue = cameraController.getElevationDeg();
     if (Math.abs(elevationValue - cameraController.viewState.elevationDeg) > 0.1) {
