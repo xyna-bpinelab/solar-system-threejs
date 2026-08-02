@@ -84,21 +84,30 @@ export function createGui(solarSystem, engine, { starfield }) {
     .name('仰角（度）')
     .onChange(() => cameraController.refreshElevation());
 
+  // ズームスライダー自体は 0〜1000 の対数位置で操作するが、その数値だけでは
+  // 実際のカメラ距離が分からず紛らわしいため、ラベルに現在の実距離を
+  // 添えて表示する（例:「ズーム（距離: 350）」）。
+  function zoomLabel(distance) {
+    return `ズーム（距離: ${Math.round(distance)}）`;
+  }
+
   const zoomState = { value: distanceToSlider(cameraController.getDistance()) };
   const zoomController = viewFolder
     .add(zoomState, 'value', 0, ZOOM_SLIDER_MAX, 1)
-    .name('ズーム')
+    .name(zoomLabel(cameraController.getDistance()))
     .onChange((value) => cameraController.setDistance(sliderToDistance(value)));
 
   // マウス操作（ホイールでのズーム、左ドラッグでの回転＝仰角変更）でも
   // カメラは変化するため、毎フレーム現在のカメラ状態からスライダー表示を
   // 計算し直す。
   function syncViewControls() {
-    const zoomValue = distanceToSlider(cameraController.getDistance());
+    const distance = cameraController.getDistance();
+    const zoomValue = distanceToSlider(distance);
     if (Math.abs(zoomValue - zoomState.value) > 0.5) {
       zoomState.value = zoomValue;
       zoomController.updateDisplay();
     }
+    zoomController.name(zoomLabel(distance));
 
     const elevationValue = cameraController.getElevationDeg();
     if (Math.abs(elevationValue - cameraController.viewState.elevationDeg) > 0.1) {
