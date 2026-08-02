@@ -113,6 +113,10 @@ export const MOON = {
 // 月は地球の次に並べて表示する。
 export const TOGGLE_BODY_NAMES = PLANETS.flatMap((p) => (p.name === 'earth' ? [p.name, MOON.name] : [p.name]));
 
+// 太陽から最も離れた惑星の軌道半径（海王星）。カメラの far 平面や
+// ズーム最大距離を、天体データ側の変更にも自動で追従させるために使う。
+export const MAX_ORBIT_DISTANCE_RATIO = Math.max(...PLANETS.map((p) => p.distanceRatio));
+
 function defaultSizeMultipliers() {
   const result = { sun: 1 };
   for (const planet of PLANETS) result[planet.name] = 1;
@@ -151,7 +155,12 @@ export const config = {
   camera: {
     fov: 45,
     near: 1,
-    far: 1500000,
+    // ズームを最大まで引いた状態で、原点付近を注視しつつ反対側にいる
+    // 海王星を見ても far 平面でクリップされないだけの余裕を確保する
+    // （最悪ケース: カメラ距離 maxZoomDistance + 反対側の海王星までの
+    // 距離 MAX_ORBIT_DISTANCE_RATIO が far を超えないようにする）。
+    far: MAX_ORBIT_DISTANCE_RATIO * 4,
+    maxZoomDistance: MAX_ORBIT_DISTANCE_RATIO * 1.5,
     // 内側の岩石惑星（水星〜火星）を見渡せる固定オフセット位置。
     // 木星より外側の軌道は距離が桁違いに大きいため、初期表示では
     // 視野に収まらない（「中心天体」選択とズームで個別に観察する想定）。

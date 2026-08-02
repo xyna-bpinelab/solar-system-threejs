@@ -6,7 +6,7 @@ const LABELS = { [SUN.name]: SUN.label, [MOON.name]: MOON.label };
 for (const planet of PLANETS) LABELS[planet.name] = planet.label;
 
 const ZOOM_MIN_DISTANCE = 1;
-const ZOOM_MAX_DISTANCE = config.camera.far * 0.9; // scene.js の controls.maxDistance と一致させる
+const ZOOM_MAX_DISTANCE = config.camera.maxZoomDistance; // scene.js の controls.maxDistance と一致させる
 const ZOOM_SLIDER_MAX = 1000;
 const ZOOM_LOG_RANGE = Math.log(ZOOM_MAX_DISTANCE / ZOOM_MIN_DISTANCE);
 

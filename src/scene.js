@@ -39,7 +39,7 @@ export function createEngine(container) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.minDistance = 1;
-  controls.maxDistance = config.camera.far * 0.9;
+  controls.maxDistance = config.camera.maxZoomDistance;
   controls.update();
 
   // 完全な暗闇を避けるための最低限の環境光（太陽の PointLight が主光源）
