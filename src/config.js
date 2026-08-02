@@ -143,6 +143,11 @@ export const config = {
   },
   // 各天体をシミュレーション画面に表示するかどうか
   visibility: defaultVisibility(),
+  // 天体名ラベル・太陽-惑星の軌道線の全体表示切り替え
+  display: {
+    labelsVisible: true,
+    orbitLinesVisible: true,
+  },
   camera: {
     fov: 45,
     near: 1,

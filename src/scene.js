@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { config } from './config.js';
 
 // レンダリングに必要な scene / camera / renderer / controls をまとめて構築する。
@@ -21,6 +22,17 @@ export function createEngine(container) {
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
 
+  // 天体名ラベル用の DOM オーバーレイ。マウス操作は下の WebGL canvas に
+  // 素通しさせるため pointer-events は無効化する。
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(container.clientWidth, container.clientHeight);
+  labelRenderer.domElement.style.position = 'absolute';
+  labelRenderer.domElement.style.top = '0';
+  labelRenderer.domElement.style.left = '0';
+  labelRenderer.domElement.style.pointerEvents = 'none';
+  container.style.position = 'relative';
+  container.appendChild(labelRenderer.domElement);
+
   const controls = new OrbitControls(camera, renderer.domElement);
   const { x: tx, y: ty, z: tz } = config.camera.initialTarget;
   controls.target.set(tx, ty, tz);
@@ -38,6 +50,7 @@ export function createEngine(container) {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
+    labelRenderer.setSize(width, height);
   }
   window.addEventListener('resize', handleResize);
 
@@ -45,6 +58,7 @@ export function createEngine(container) {
     scene,
     camera,
     renderer,
+    labelRenderer,
     controls,
     dispose: () => window.removeEventListener('resize', handleResize),
   };

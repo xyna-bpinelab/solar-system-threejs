@@ -6,10 +6,10 @@ import './style.css';
 
 const container = document.querySelector('#app');
 const engine = createEngine(container);
-const { scene, camera, renderer, controls } = engine;
+const { scene, camera, renderer, labelRenderer, controls } = engine;
 const solarSystem = createSolarSystem(scene);
 
-const { cameraController } = createGui(solarSystem, engine);
+const { cameraController, syncZoomSlider } = createGui(solarSystem, engine);
 
 const clock = new THREE.Clock();
 
@@ -18,8 +18,10 @@ function animate() {
 
   solarSystem.update(clock.getDelta());
   cameraController.update();
+  syncZoomSlider();
   controls.update();
   renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
 }
 
 animate();

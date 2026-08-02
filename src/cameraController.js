@@ -72,5 +72,23 @@ export function createCameraController({ scene, camera, controls }, bodies) {
     camera.position.add(delta);
   }
 
-  return { viewState, setOrbitTarget, refreshElevation, update };
+  // 現在のカメラ-注視点間の距離（＝マウスホイールのズームと同じ量）。
+  function getDistance() {
+    return camera.position.distanceTo(controls.target);
+  }
+
+  // 現在の向き（方位角・仰角）を保ったまま、距離だけを変更する。
+  // GUI のズームスライダーから呼び出され、マウスホイールでの
+  // ズームと同じ結果になる。
+  function setDistance(distance) {
+    const offset = camera.position.clone().sub(controls.target);
+    const currentDistance = offset.length();
+    if (currentDistance < 1e-6) return;
+
+    const clamped = THREE.MathUtils.clamp(distance, controls.minDistance, controls.maxDistance);
+    camera.position.copy(controls.target).addScaledVector(offset, clamped / currentDistance);
+    controls.update();
+  }
+
+  return { viewState, setOrbitTarget, refreshElevation, update, getDistance, setDistance };
 }
