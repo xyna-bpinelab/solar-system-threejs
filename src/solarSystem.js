@@ -5,24 +5,14 @@ import { config, EARTH_RADIUS_UNIT, SUN, PLANETS, MOON } from './config.js';
 
 const TWO_PI = Math.PI * 2;
 
-// 太陽から惑星までを結ぶ、控えめな点線。
+// 太陽から惑星までを結ぶ、はっきり視認できる実線。
 function createOrbitLine(distance) {
   const geometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, 0, 0),
     new THREE.Vector3(distance, 0, 0),
   ]);
-  // 距離によらず線1本あたりの点線の密度が揃うように、間隔を距離に比例させる。
-  const dashSize = distance * 0.004;
-  const material = new THREE.LineDashedMaterial({
-    color: 0x556677,
-    dashSize,
-    gapSize: dashSize,
-    transparent: true,
-    opacity: 0.6,
-  });
-  const line = new THREE.Line(geometry, material);
-  line.computeLineDistances();
-  return line;
+  const material = new THREE.LineBasicMaterial({ color: 0x7d95ad });
+  return new THREE.Line(geometry, material);
 }
 
 // 天体メッシュの少し上（半径基準のオフセット）にラベルを添える。

@@ -77,6 +77,14 @@ export function createCameraController({ scene, camera, controls }, bodies) {
     return camera.position.distanceTo(controls.target);
   }
 
+  // 現在のカメラの仰角（度）。左ドラッグでの回転（縦方向）は OrbitControls が
+  // 直接カメラを動かすため、GUI 側の仰角表示をこの値で追従させる。
+  function getElevationDeg() {
+    const offset = camera.position.clone().sub(controls.target);
+    const horizontal = Math.hypot(offset.x, offset.z);
+    return THREE.MathUtils.radToDeg(Math.atan2(offset.y, horizontal));
+  }
+
   // 現在の向き（方位角・仰角）を保ったまま、距離だけを変更する。
   // GUI のズームスライダーから呼び出され、マウスホイールでの
   // ズームと同じ結果になる。
@@ -90,5 +98,13 @@ export function createCameraController({ scene, camera, controls }, bodies) {
     controls.update();
   }
 
-  return { viewState, setOrbitTarget, refreshElevation, update, getDistance, setDistance };
+  return {
+    viewState,
+    setOrbitTarget,
+    refreshElevation,
+    update,
+    getDistance,
+    setDistance,
+    getElevationDeg,
+  };
 }
