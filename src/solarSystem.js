@@ -35,7 +35,8 @@ function attachLabel(body, text) {
 //               └ mesh    … 自転、ラベル
 //
 // 月だけは地球の distanceGroup にぶら下がる特別な子天体で、
-// 「地球+月グループ」が太陽を公転する構造になっている。
+// 「地球+月グループ」が太陽を公転する構造になっている
+// （moonOrbitPivot に地球-月間の軌道線も一緒にぶら下げる）。
 export function createSolarSystem(scene) {
   // ジオメトリは厳密比率のみで固定生成し、GUI からのサイズ倍率変更は
   // mesh.scale で反映する（ジオメトリの再生成を避け、スライダー操作に
@@ -82,12 +83,16 @@ export function createSolarSystem(scene) {
   const moonOrbitPivot = new THREE.Group();
   planets.earth.distanceGroup.add(moonOrbitPivot);
 
+  const moonDistance = EARTH_RADIUS_UNIT * MOON.distanceRatio;
+  const moonOrbitLine = createOrbitLine(moonDistance);
+  moonOrbitPivot.add(moonOrbitLine);
+
   const moon = new CelestialBody({
     name: MOON.name,
     radius: EARTH_RADIUS_UNIT * MOON.radiusRatio,
     color: MOON.color,
   });
-  moon.mesh.position.x = EARTH_RADIUS_UNIT * MOON.distanceRatio;
+  moon.mesh.position.x = moonDistance;
   const moonLabel = attachLabel(moon, MOON.label);
   moonOrbitPivot.add(moon.mesh);
 
@@ -115,6 +120,7 @@ export function createSolarSystem(scene) {
     }
     moon.mesh.visible = config.visibility.moon;
     moonLabel.visible = config.visibility.moon && config.display.labelsVisible;
+    moonOrbitLine.visible = config.visibility.moon && config.display.orbitLinesVisible;
     sunLabel.visible = config.display.labelsVisible;
   }
   applyVisibility();

@@ -117,10 +117,21 @@ export const TOGGLE_BODY_NAMES = PLANETS.flatMap((p) => (p.name === 'earth' ? [p
 // ズーム最大距離を、天体データ側の変更にも自動で追従させるために使う。
 export const MAX_ORBIT_DISTANCE_RATIO = Math.max(...PLANETS.map((p) => p.distanceRatio));
 
+// 起動時の初期表示値、および GUI の「デフォルト表示に戻す」ボタンが
+// 復元する値。両者が食い違わないよう、この定数を唯一の情報源にする。
+export const DEFAULT_VIEW = {
+  timeSpeed: 10,
+  centerBody: 'earth',
+  elevationDeg: 10,
+  zoomDistance: 400,
+  sizeMultiplier: { earth: 10, moon: 10 },
+};
+
 function defaultSizeMultipliers() {
   const result = { sun: 1 };
   for (const planet of PLANETS) result[planet.name] = 1;
   result[MOON.name] = 1;
+  Object.assign(result, DEFAULT_VIEW.sizeMultiplier);
   return result;
 }
 
@@ -142,7 +153,7 @@ export const config = {
   },
   time: {
     // 実時間1秒あたりに進めるシミュレーション上の日数
-    speed: 20,
+    speed: DEFAULT_VIEW.timeSpeed,
     paused: false,
   },
   // 各天体をシミュレーション画面に表示するかどうか

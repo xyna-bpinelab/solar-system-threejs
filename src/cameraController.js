@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DEFAULT_VIEW } from './config.js';
 
 const tmpA = new THREE.Vector3();
 
@@ -25,7 +26,7 @@ function sphericalOffset(distance, azimuthRad, elevationRad) {
 // OrbitControls によるマウス操作（水平方向の回転・ズーム）は常に有効なまま、
 // 対象が公転で移動した分だけカメラごと平行移動させて追従させる。
 export function createCameraController({ scene, camera, controls }, bodies) {
-  const viewState = { centerBody: 'sun', elevationDeg: 20 };
+  const viewState = { centerBody: DEFAULT_VIEW.centerBody, elevationDeg: DEFAULT_VIEW.elevationDeg };
   let targetMesh = null;
 
   function applyOrbit({ recomputeDistance }) {

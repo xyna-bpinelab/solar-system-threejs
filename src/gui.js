@@ -1,5 +1,5 @@
 import GUI from 'lil-gui';
-import { config, SUN, PLANETS, MOON, TOGGLE_BODY_NAMES } from './config.js';
+import { config, SUN, PLANETS, MOON, TOGGLE_BODY_NAMES, DEFAULT_VIEW } from './config.js';
 import { createCameraController } from './cameraController.js';
 
 const LABELS = { [SUN.name]: SUN.label, [MOON.name]: MOON.label };
@@ -34,34 +34,41 @@ export function createGui(solarSystem, engine) {
   for (const name in solarSystem.planets) bodies[name] = solarSystem.planets[name].body.mesh;
   const cameraController = createCameraController(engine, bodies);
 
-  const timeFolder = gui.addFolder('時間');
-  timeFolder.add(config.time, 'paused').name('一時停止');
-  timeFolder.add(config.time, 'speed', 0, 200, 1).name('速度 (日/秒)');
+  const sizeControllers = {};
 
-  const displayFolder = gui.addFolder('表示オプション');
+  // resetToDefaults は下で定義するが、常に先頭に置いて
+  // 「いつでも簡単に戻れる」ようにするため、ここで先にボタンを追加する
+  // （関数宣言はホイスティングされるため、定義前でも参照できる）。
+  gui.add({ resetToDefaults: () => resetToDefaults() }, 'resetToDefaults').name('デフォルト表示に戻す');
+
+  const timeFolder = gui.addFolder('時間').close();
+  timeFolder.add(config.time, 'paused').name('一時停止');
+  const speedController = timeFolder.add(config.time, 'speed', 0, 200, 1).name('速度 (日/秒)');
+
+  const displayFolder = gui.addFolder('表示オプション').close();
   displayFolder
     .add(config.display, 'labelsVisible')
     .name('天体名ラベル')
     .onChange(() => solarSystem.applyVisibility());
   displayFolder
     .add(config.display, 'orbitLinesVisible')
-    .name('軌道線（太陽-惑星）')
+    .name('軌道線（太陽-惑星・地球-月）')
     .onChange(() => solarSystem.applyVisibility());
 
-  const bodyFolder = gui.addFolder('天体ごとの表示・拡大設定');
+  const bodyFolder = gui.addFolder('天体ごとの表示・拡大設定').close();
   for (const name of TOGGLE_BODY_NAMES) {
-    const sub = bodyFolder.addFolder(LABELS[name]);
+    const sub = bodyFolder.addFolder(LABELS[name]).close();
     sub.add(config.visibility, name).name('表示').onChange(() => solarSystem.applyVisibility());
     const maxMultiplier = name === MOON.name ? 80 : 30;
-    sub
+    sizeControllers[name] = sub
       .add(config.scale.sizeMultiplier, name, 1, maxMultiplier, 1)
       .name('サイズ倍率')
       .onChange(() => solarSystem.applyScale());
   }
 
-  const viewFolder = gui.addFolder('視点（画面中心に置く天体・仰角）');
+  const viewFolder = gui.addFolder('視点（画面中心に置く天体・仰角）').close();
   const centerOptions = { [SUN.label]: SUN.name, ...Object.fromEntries(TOGGLE_BODY_NAMES.map((n) => [LABELS[n], n])) };
-  viewFolder
+  const centerBodyController = viewFolder
     .add(cameraController.viewState, 'centerBody', centerOptions)
     .name('中心天体')
     .onChange((name) => cameraController.setOrbitTarget(name));
@@ -92,6 +99,29 @@ export function createGui(solarSystem, engine) {
       elevationController.updateDisplay();
     }
   }
+
+  // DEFAULT_VIEW（config.js）に定義された初期表示値を復元する。
+  // 起動直後の状態を作るのにも、「デフォルト表示に戻す」ボタンにも使う
+  // ——両者がずれないよう、この関数だけを唯一の適用経路にする。
+  function resetToDefaults() {
+    config.time.speed = DEFAULT_VIEW.timeSpeed;
+    speedController.updateDisplay();
+
+    for (const name in DEFAULT_VIEW.sizeMultiplier) {
+      config.scale.sizeMultiplier[name] = DEFAULT_VIEW.sizeMultiplier[name];
+      sizeControllers[name]?.updateDisplay();
+    }
+    solarSystem.applyScale();
+
+    cameraController.viewState.elevationDeg = DEFAULT_VIEW.elevationDeg;
+    cameraController.setOrbitTarget(DEFAULT_VIEW.centerBody);
+    cameraController.setDistance(DEFAULT_VIEW.zoomDistance);
+    centerBodyController.updateDisplay();
+    elevationController.updateDisplay();
+    syncViewControls();
+  }
+
+  resetToDefaults();
 
   return { gui, cameraController, syncViewControls };
 }
